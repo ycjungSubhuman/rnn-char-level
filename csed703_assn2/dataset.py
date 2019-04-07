@@ -93,5 +93,5 @@ class TextlineToVector():
         line = self.latin_to_english(data_in)
         tensor = torch.zeros(len(line), 1, len(self.all_chars))
         for li, letter in enumerate(line):
-            tensor[li][0][self.ascii_char_to_index(letter)] = 1
+            tensor[li, 0, self.ascii_char_to_index(letter)] = 1
         return tensor
