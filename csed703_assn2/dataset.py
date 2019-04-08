@@ -21,7 +21,7 @@ class FilenameClassDataset(Dataset):
         """
         self.transform = transform
         self.class_names = [
-            os.path.extsep(f)[0]
+            os.path.splitext(f)[0]
             for f in os.listdir(root_path)
             if f.endswith('.txt')]
 
@@ -58,8 +58,7 @@ class FilenameClassDataset(Dataset):
         class_ind = 0
         marginal_ind = idx
         while marginal_ind >= len(self.lines_per_class_ind[class_ind]):
-            marginal_ind = (marginal_ind %
-                            len(self.lines_per_class_ind[class_ind]))
+            marginal_ind -= len(self.lines_per_class_ind[class_ind])
             class_ind += 1
         raw_line = self.lines_per_class_ind[class_ind][marginal_ind]
         line = (raw_line if self.transform is None
@@ -92,6 +91,6 @@ class TextlineToVector():
     def __call__(self, data_in):
         line = self.latin_to_english(data_in)
         tensor = torch.zeros(len(line), 1, len(self.all_chars))
-        for li, letter in enumerate(line):
-            tensor[li, 0, self.ascii_char_to_index(letter)] = 1
+        for i, letter in enumerate(line):
+            tensor[i, 0, self.ascii_char_to_index(letter)] = 1
         return tensor

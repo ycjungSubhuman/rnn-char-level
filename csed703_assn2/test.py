@@ -3,6 +3,7 @@ Test/validation cycle definition
 '''
 import os
 import numpy as np
+import torch
 from torch.utils.data.dataloader import DataLoader
 
 import dataset
@@ -14,8 +15,8 @@ def get_average_loss(predictor_module, loss_module, loader):
     loss = 0.0
     cnt = 0
     for label, text in loader:
-        pred = predictor_module(text)
-        loss += loss_module(label, pred)
+        pred = predictor_module.eval()(text.cuda())
+        loss += loss_module(label.cuda(), pred)
         cnt += 1
     return loss / cnt
 
@@ -26,16 +27,23 @@ def get_confusion_matrix(predictor_module, loader):
     mat = np.zeros((num_class, num_class), dtype=np.int32)
     for data in loader:
         label, text = data
-        pred = np.argmax(predictor_module(text).datach().numpy())
+        pred = predictor_module.eval()(text.cuda()).topk(1)[1][0].item()
         mat[pred, label] += 1
 
     return mat
 
+def run_confusion(it, predictor, loader):
+    mat = get_confusion_matrix(predictor, loader)
+    acc = (np.diag(mat).sum() / mat.sum()).item()
+    vis.save_confusion_matrix(
+        '{}_confusion.png'.format(it),
+        loader.dataset.class_names, mat)
+    return acc
+
 def test(test_set, predictor_module, loss_module,
-         loss_hook=get_average_loss, 
-         vis_hook=lambda predictor, loader:
-         vis.save_confusion_matrix('confusion.png', loader.dataset.class_names,
-                                   get_confusion_matrix(predictor, loader))):
+         test_id=0,
+         loss_hook=get_average_loss,
+         vis_hook=run_confusion):
     """
     Test model performance as accuracy
 
@@ -47,12 +55,14 @@ def test(test_set, predictor_module, loss_module,
                     takes 'model', dataloader  and returns loss
     vis_hook        a hook for visualizing test results
     """
-    test_loader = DataLoader(test_set)
+    test_loader = DataLoader(
+        test_set,
+        collate_fn=lambda li: (torch.LongTensor([li[0][0]]), li[0][1]))
 
     loss = loss_hook(predictor_module, loss_module, test_loader)
-    vis_hook(predictor_module, test_loader)
+    acc = vis_hook(test_id, predictor_module, test_loader)
 
-    return loss
+    return loss, acc
 
 def run_test():
     checkpoint = 'checkpoint/checkpoint.chk'
@@ -65,7 +75,8 @@ def run_test():
     _, sample_text = test_set[0]
     predictor_module = model.CityNamePredictor(
         sample_text.size()[2], len(test_set.class_names)).cuda()
-    predictor_module.load_state_dict('checkpoint.chk')
+    chk = torch.load('checkpoint/checkpoint.chk')
+    predictor_module.load_state_dict(chk)
 
     test(test_set, predictor_module, loss_module)
 

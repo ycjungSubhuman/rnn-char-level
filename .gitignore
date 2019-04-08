@@ -1,4 +1,6 @@
 .vs*
 **/*.sln
 **/*.pyproj
-**/data/
+**/__pycache__
+trial*
+*.png

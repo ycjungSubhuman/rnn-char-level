@@ -3,6 +3,7 @@ Codes for visualization
 '''
 import pandas as pd
 import seaborn as sn
+import numpy as np
 import matplotlib.pyplot as plt
 
 def save_confusion_matrix(path, label_names, mat):
@@ -17,11 +18,12 @@ def save_confusion_matrix(path, label_names, mat):
     assert mat.shape[0] == len(label_names)
     assert mat.shape[1] == len(label_names)
     plt.figure("Confusion matrix")
-    plt.title("Confusion matrix")
+    acc = np.diag(mat).sum() / mat.sum()
+    plt.title("Confusion matrix ({})".format(acc))
     conf_dataframe = pd.DataFrame(mat, label_names, label_names)
-    sn.set(font_scale=1.4)
-    sn.heatmap(conf_dataframe, annot=True, annot_kws={"size": 16})
+    sn.heatmap(conf_dataframe, annot=True)
     plt.savefig(path)
+    plt.close()
 
 def save_loss_graph(path, iteration, train_loss, val_loss):
     """
@@ -40,3 +42,4 @@ def save_loss_graph(path, iteration, train_loss, val_loss):
     plt.ylabel("loss")
     plt.legend()
     plt.savefig(path)
+    plt.close()
